@@ -4,11 +4,13 @@ import { JWT_SECRET } from "@repo/backend-common/config";
 import { middleware } from "./middleware";
 import { CreateRoomSchema, CreateUserSchema, SignSchema } from "@repo/common/types";
 import { prismaCLient } from "@repo/db";
+import cors from "cors"
 
 const app = express();
 
 // Middleware to parse JSON requests
 app.use(express.json());
+app.use(cors())
 
 /**
  * @route POST /signup
