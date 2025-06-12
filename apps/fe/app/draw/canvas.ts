@@ -82,7 +82,8 @@ export default async function initDraw(canvas: HTMLCanvasElement, roomId: string
     // Only create shape if it has meaningful dimensions
     if (Math.abs(width) > 5 && Math.abs(height) > 5) {
       const shape: Shape = {
-        type: "rect",
+        //@ts-ignore
+        type: window.selectedTool,
         x: startX,
         y: startY,
         width,
@@ -115,7 +116,22 @@ export default async function initDraw(canvas: HTMLCanvasElement, roomId: string
     // Live preview
     clearCanvasAndRedraw(existingShapes, ctx, canvas);
     ctx.strokeStyle = "rgba(255,255,255,1)";
+
+    //@ts-ignore
+    const selectedTool = window.selectedTool;
+
+    if (selectedTool==="rect"){
     ctx.strokeRect(startX, startY, width, height);
+    }else if (selectedTool === "circle"){
+      const centerX = startX + width/2;
+      const centerY = startY + height/2;
+      const radius = Math.max(width,height)/2
+      ctx.beginPath();
+      ctx.arc(centerX, centerY , radius, 0 , Math.PI*2)
+      ctx.stroke();
+      ctx.closePath();
+        }
+
   });
 }
 
