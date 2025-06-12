@@ -95,7 +95,8 @@ export default async function initDraw(canvas: HTMLCanvasElement, roomId: string
       try {
         socket.send(JSON.stringify({
           type: "chat",
-          message: JSON.stringify(shape)
+          message: JSON.stringify(shape),
+        roomId: roomId  
         }));
       } catch (error) {
         console.error("Failed to send shape:", error);

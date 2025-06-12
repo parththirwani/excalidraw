@@ -45,9 +45,12 @@ wss.on('connection', function connection(ws, request) {
 
   // Reject connection if token is invalid
   if (userId === null) {
+    console.log('Invalid token, closing connection');
     ws.close();
     return;
   }
+
+  console.log(`User ${userId} connected`);
 
   // Register user in memory
   users.push({
@@ -58,53 +61,97 @@ wss.on('connection', function connection(ws, request) {
 
   // Handle incoming messages
   ws.on('message', async function message(data) {
-    const parseData = JSON.parse(data as unknown as string);
+    try {
+      const parseData = JSON.parse(data as unknown as string);
+      console.log('Received message:', parseData);
 
-    /**
-     * Client wants to join a room
-     */
-    if (parseData.type === "join_room") {
-      const user = users.find(x => x.ws === ws);
-      user?.rooms.push(parseData.roomId);
-    }
-
-    /**
-     * Client wants to leave a room
-     */
-    if (parseData.type === "leave_room") {
-      const user = users.find(x => x.ws === ws);
-      if (!user) return;
-      user.rooms = user.rooms.filter(x => x !== parseData.roomId);
-    }
-
-    /**
-     * Client sends a chat message
-     * - Save message to DB
-     * - Broadcast to all users in the same room
-     */
-    if (parseData.type === "chat") {
-      const roomId = parseData.roomId;
-      const message = parseData.message;
-
-      // Save to DB
-      await prismaCLient.chat.create({
-        data: {
-          roomId,
-          message,
-          userId
+      /**
+       * Client wants to join a room
+       */
+      if (parseData.type === "join_room") {
+        const user = users.find(x => x.ws === ws);
+        if (user) {
+          user.rooms.push(parseData.roomId);
+          console.log(`User ${userId} joined room ${parseData.roomId}`);
         }
-      });
+      }
 
-      // Broadcast to all users in the room
-      users.forEach(user => {
-        if (user.rooms.includes(roomId)) {
-          user.ws.send(JSON.stringify({
-            type: "chat",
-            message,
-            roomId
-          }));
+      /**
+       * Client wants to leave a room
+       */
+      if (parseData.type === "leave_room") {
+        const user = users.find(x => x.ws === ws);
+        if (!user) return;
+        user.rooms = user.rooms.filter(x => x !== parseData.roomId);
+        console.log(`User ${userId} left room ${parseData.roomId}`);
+      }
+
+      /**
+       * Client sends a chat message
+       * - Save message to DB
+       * - Broadcast to all users in the same room
+       */
+      if (parseData.type === "chat") {
+        const roomIdString = parseData.roomId;
+        const message = parseData.message;
+
+        // Convert roomId to integer for database
+        const roomId = parseInt(roomIdString, 10);
+        
+        if (isNaN(roomId)) {
+          console.error('Invalid roomId provided:', roomIdString);
+          return;
         }
-      });
+
+        console.log(`Saving message to room ${roomId} from user ${userId}`);
+
+        // Save to DB
+        try {
+          await prismaCLient.chat.create({
+            data: {
+              roomId, // Now this is an integer
+              message,
+              userId
+            }
+          });
+          console.log('Message saved to database');
+        } catch (dbError) {
+          console.error('Database error:', dbError);
+          return;
+        }
+
+        // Broadcast to all users in the room
+        const usersInRoom = users.filter(user => user.rooms.includes(roomIdString));
+        console.log(`Broadcasting to ${usersInRoom.length} users in room ${roomId}`);
+        
+        usersInRoom.forEach(user => {
+          if (user.ws.readyState === WebSocket.OPEN) {
+            user.ws.send(JSON.stringify({
+              type: "chat",
+              message,
+              roomId: roomIdString // Send back as string for consistency
+            }));
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error processing message:', error);
     }
   });
+
+  // Handle connection close
+  ws.on('close', () => {
+    console.log(`User ${userId} disconnected`);
+    const index = users.findIndex(x => x.ws === ws);
+    if (index !== -1) {
+      users.splice(index, 1);
+    }
+  });
+
+  // Handle WebSocket errors
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
 });
+
+console.log('WebSocket server running on port 8080');
