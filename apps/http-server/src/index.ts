@@ -18,28 +18,27 @@ app.use(cors())
  * @access Public
  */
 app.post("/signup", async (req, res) => {
-    const parsedData = CreateUserSchema.safeParse(req.body);
-    if (!parsedData.success) {
-        console.log(parsedData.error);
-        res.json({ message: "Incorrect inputs" });
-        return;
-    }
+  const parsedData = CreateUserSchema.safeParse(req.body);
+  if (!parsedData.success) {
+    console.log(parsedData.error);
+    res.json({ message: "Incorrect inputs" });
+    return;
+  }
 
-    try {
-        const user = await prismaCLient.user.create({
-            data: {
-                email: parsedData.data?.username,
-                password: parsedData.data.password,
-                name: parsedData.data.name
-            }
-        });
-
-        res.json({ userId: user.id });
-    } catch (e) {
-        res.status(411).json({
-            message: "User already exists with this username"
-        });
-    }
+  try {
+    const user = await prismaCLient.user.create({
+      data: {
+        email: parsedData.data?.username,
+        password: parsedData.data.password,
+        name: parsedData.data.name
+      }
+    });
+    res.json({ userId: user.id });
+  } catch (e) {
+    res.status(411).json({
+      message: "User already exists with this username"
+    });
+  }
 });
 
 /**
@@ -48,29 +47,28 @@ app.post("/signup", async (req, res) => {
  * @access Public
  */
 app.post("/signin", async (req, res) => {
-    const parsedData = SignSchema.safeParse(req.body);
-    if (!parsedData.success) {
-        res.json({ message: "Incorrect Inputs" });
-        return;
+  const parsedData = SignSchema.safeParse(req.body);
+  if (!parsedData.success) {
+    res.json({ message: "Incorrect Inputs" });
+    return;
+  }
+
+  // TODO: Use hashed passwords in production
+  const user = await prismaCLient.user.findFirst({
+    where: {
+      email: parsedData.data.username,
+      password: parsedData.data.password
     }
+  });
 
-    // TODO: Use hashed passwords in production
-    const user = await prismaCLient.user.findFirst({
-        where: {
-            email: parsedData.data.username,
-            password: parsedData.data.password
-        }
-    });
+  if (!user) {
+    res.status(403).json({ message: "Not Authorized" });
+    return;
+  }
 
-    if (!user) {
-        res.status(403).json({ message: "Not Authorized" });
-        return;
-    }
-
-    // Generate JWT with userId
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET);
-
-    res.json({ token });
+  // Generate JWT with userId
+  const token = jwt.sign({ userId: user.id }, JWT_SECRET);
+  res.json({ token });
 });
 
 /**
@@ -79,29 +77,28 @@ app.post("/signin", async (req, res) => {
  * @access Protected (requires JWT middleware)
  */
 app.post("/room", middleware, async (req, res) => {
-    const parsedData = CreateRoomSchema.safeParse(req.body);
-    if (!parsedData.success) {
-        res.json({ message: "Incorrect inputs" });
-        return;
-    }
+  const parsedData = CreateRoomSchema.safeParse(req.body);
+  if (!parsedData.success) {
+    res.json({ message: "Incorrect inputs" });
+    return;
+  }
 
-    // @ts-ignore added to bypass TS error from middleware-injected userId
-    const userId = req.userId;
+  // @ts-ignore added to bypass TS error from middleware-injected userId
+  const userId = req.userId;
 
-    try {
-        const room = await prismaCLient.room.create({
-            data: {
-                slug: parsedData.data.name,
-                adminId: userId
-            }
-        });
-
-        res.json({ roomId: room.id });
-    } catch (e) {
-        res.status(411).json({
-            message: "Room with this name already exists"
-        });
-    }
+  try {
+    const room = await prismaCLient.room.create({
+      data: {
+        slug: parsedData.data.name,
+        adminId: userId
+      }
+    });
+    res.json({ roomId: room.id });
+  } catch (e) {
+    res.status(411).json({
+      message: "Room with this name already exists"
+    });
+  }
 });
 
 /**
@@ -110,44 +107,79 @@ app.post("/room", middleware, async (req, res) => {
  * @access Public
  */
 app.get("/chats/:roomId", async (req, res) => {
-    try {
-        const roomId = Number(req.params.roomId);
-        console.log(req.params.roomId);
-        const messages = await prismaCLient.chat.findMany({
-            where: {
-                roomId: roomId
-            },
-            orderBy: {
-                id: "desc"
-            },
-            take: 50
-        });
-
-        res.json({
-            messages
-        })
-    } catch(e) {
-        console.log(e);
-        res.json({
-            messages: []
-        })
-    }
-    
+  try {
+    const roomId = Number(req.params.roomId);
+    console.log(req.params.roomId);
+    const messages = await prismaCLient.chat.findMany({
+      where: {
+        roomId: roomId
+      },
+      orderBy: {
+        id: "desc"
+      },
+      take: 50
+    });
+    res.json({
+      messages
+    })
+  } catch(e) {
+    console.log(e);
+    res.json({
+      messages: []
+    })
+  }
 })
 
-app.get("/room/:slug", async (req, res) => {
-    const slug = req.params.slug;
-    const room = await prismaCLient.room.findFirst({
-        where: {
-            slug
-        }
+/**
+ * @route DELETE /chats/:roomId
+ * @desc Clear all chat messages/shapes from a room
+ * @access Public
+ */
+app.delete("/chats/:roomId", async (req, res) => {
+  try {
+    const roomId = Number(req.params.roomId);
+    
+    // Delete all chat messages for this room
+    const deletedMessages = await prismaCLient.chat.deleteMany({
+      where: {
+        roomId: roomId
+      }
     });
 
+    console.log(`Cleared ${deletedMessages.count} messages from room ${roomId}`);
+    
     res.json({
-        room
-    })
+      success: true,
+      deletedCount: deletedMessages.count,
+      message: `Cleared ${deletedMessages.count} shapes from room`
+    });
+  } catch(e) {
+    console.error("Error clearing room messages:", e);
+    res.status(500).json({
+      success: false,
+      message: "Failed to clear room messages"
+    });
+  }
 })
+
+/**
+ * @route GET /room/:slug
+ * @desc Get room details by slug
+ * @access Public
+ */
+app.get("/room/:slug", async (req, res) => {
+  const slug = req.params.slug;
+  const room = await prismaCLient.room.findFirst({
+    where: {
+      slug
+    }
+  });
+  res.json({
+    room
+  })
+})
+
 // Start the server on port 3001
 app.listen(3001, () => {
-    console.log("Server listening on port 3001");
+  console.log("Server listening on port 3001");
 });

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import initDraw from "../draw/canvas";
+import { ShapeLogic } from "../draw/ShapeLogic";
 import { IconButton } from "./IconButton";
-import { Circle, Pencil, RectangleHorizontal } from "lucide-react";
+import { Circle, Pencil, RectangleHorizontal, Trash2 } from "lucide-react";
 
 type Shape = "circle" | "rect" | "pencil";
 
@@ -13,50 +13,91 @@ export function Canvas({
     socket: WebSocket
 }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [selectedTool, setSelectedTool] = useState <Shape> ("circle")
+    const shapeLogicRef = useRef<ShapeLogic | null>(null);
+    const [selectedTool, setSelectedTool] = useState<Shape>("circle");
 
-    useEffect(()=>{
+    useEffect(() => {
         //@ts-ignore
         window.selectedTool = selectedTool;
-    },[selectedTool])
-
+    }, [selectedTool]);
 
     useEffect(() => {
         if (canvasRef.current) {
-            initDraw(canvasRef.current, roomId, socket)
+            try {
+                shapeLogicRef.current = new ShapeLogic(canvasRef.current, roomId, socket);
+            } catch (error) {
+                console.error("Failed to initialize ShapeLogic:", error);
+            }
         }
-    }, [canvasRef])
+    }, [canvasRef, roomId, socket]);
 
-    return <div style={{
-        height: "100vh",
-        overflow: "hidden"
-    }}>
-        <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight}></canvas>
-        <TopBar setSelectedTool={setSelectedTool} selectedTool = {selectedTool} />
+    const handleClearAll = async () => {
+        if (shapeLogicRef.current) {
+            await shapeLogicRef.current.clearAllShapesAndNotify();
+        }
+    };
 
-    </div>
+    return (
+        <div style={{
+            height: "100vh",
+            overflow: "hidden"
+        }}>
+            <canvas
+                ref={canvasRef}
+                width={window.innerWidth}
+                height={window.innerHeight}
+            />
+            <TopBar
+                setSelectedTool={setSelectedTool}
+                selectedTool={selectedTool}
+                onClearAll={handleClearAll}
+            />
+        </div>
+    );
 }
 
-function TopBar({selectedTool, setSelectedTool}:{
+function TopBar({
+    selectedTool,
+    setSelectedTool,
+    onClearAll
+}: {
     selectedTool: Shape,
-    setSelectedTool: (s: Shape)=>void
+    setSelectedTool: (s: Shape) => void,
+    onClearAll: () => void
 }) {
-
-    return <div style={{
-        position: "fixed",
-        top: 50,
-        left: 20
-    }}>
-        <div className="flex gap-t">
-        <IconButton activated= {selectedTool === "pencil"} icon={<Pencil />} onClick={() => { 
-            setSelectedTool("pencil")
-        }}></IconButton>
-        <IconButton activated= {selectedTool === "rect"} icon={<RectangleHorizontal />} onClick={() => { 
-            setSelectedTool("rect")
-        }}></IconButton>
-        <IconButton activated= {selectedTool === "circle"} icon={<Circle />} onClick={() => {
-            setSelectedTool("circle")
-         }}></IconButton>
+    return (
+        <div style={{
+            position: "fixed",
+            top: 50,
+            left: 20
+        }}>
+            <div className="flex gap-1">
+                <IconButton
+                    activated={selectedTool === "pencil"}
+                    icon={<Pencil />}
+                    onClick={() => setSelectedTool("pencil")}
+                    tooltip="Pencil Tool"
+                />
+                <IconButton
+                    activated={selectedTool === "rect"}
+                    icon={<RectangleHorizontal />}
+                    onClick={() => setSelectedTool("rect")}
+                    tooltip="Rectangle Tool"
+                />
+                <IconButton
+                    activated={selectedTool === "circle"}
+                    icon={<Circle />}
+                    onClick={() => setSelectedTool("circle")}
+                    tooltip="Circle Tool"
+                />
+                <IconButton
+                    activated={false}
+                    icon={<Trash2 />}
+                    onClick={onClearAll}
+                    tooltip="Clear All Shapes"
+                    variant="danger"
+                />
+            </div>
         </div>
- </div >
+    );
 }
