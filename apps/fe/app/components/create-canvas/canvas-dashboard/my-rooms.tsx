@@ -24,9 +24,10 @@ interface MyRoomsProps {
     showPublic: boolean;
     showPrivate: boolean;
   };
+  onCreateCanvas?: () => void; // Add this prop
 }
 
-export function MyRooms({ rooms, filteredRooms, searchQuery, filters }: MyRoomsProps) {
+export function MyRooms({ rooms, filteredRooms, searchQuery, filters, onCreateCanvas }: MyRoomsProps) {
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -84,6 +85,7 @@ export function MyRooms({ rooms, filteredRooms, searchQuery, filters }: MyRoomsP
   };
 
   const emptyState = getEmptyStateMessage();
+  const showCreateButton = rooms.length === 0; // Only show create button when no rooms exist at all
 
   return (
     <div className="mb-8">
@@ -96,11 +98,28 @@ export function MyRooms({ rooms, filteredRooms, searchQuery, filters }: MyRoomsP
 
       {filteredRooms.length === 0 ? (
         <div className="text-center py-12 bg-white/5 rounded-xl border border-white/10">
-          <Plus className="h-8 w-8 mx-auto mb-3" style={{ color: '#a8a5ff' }} />
+          <div 
+            className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 transition-all duration-200 ${
+              showCreateButton 
+                ? 'bg-white/10 hover:bg-white/20 cursor-pointer border-2 border-dashed border-white/20 hover:border-white/40' 
+                : ''
+            }`}
+            onClick={showCreateButton ? onCreateCanvas : undefined}
+            role={showCreateButton ? "button" : undefined}
+            tabIndex={showCreateButton ? 0 : undefined}
+            onKeyDown={showCreateButton ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onCreateCanvas?.();
+              }
+            } : undefined}
+          >
+            <Plus className="h-8 w-8" style={{ color: '#a8a5ff' }} />
+          </div>
           <h3 className="text-lg font-medium text-white mb-2">
             {emptyState.title}
           </h3>
-          <p style={{ color: '#a8a5ff' }}>
+          <p style={{ color: '#a8a5ff' }} className="mb-4">
             {emptyState.description}
           </p>
         </div>

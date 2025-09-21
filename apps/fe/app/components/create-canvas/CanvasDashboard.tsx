@@ -131,6 +131,7 @@ export function CanvasDashboard() {
           filteredRooms={filteredMyRooms}
           searchQuery={searchQuery}
           filters={filters}
+          onCreateCanvas={handleCreateCanvas} // Pass the handler here
         />
         
         <PublicRooms
