@@ -168,7 +168,7 @@ export const useMyRooms = () => {
   };
 };
 
-// Hook to fetch all public rooms
+// Hook to fetch public rooms (excluding user's own rooms)
 export const usePublicRooms = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,7 +178,7 @@ export const usePublicRooms = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiCall('/rooms');
+      const data = await apiCall('/public-rooms'); // Changed from '/rooms' to '/public-rooms'
       setRooms(data.rooms);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch public rooms';
@@ -198,6 +198,39 @@ export const usePublicRooms = () => {
     loading,
     error,
     refetch: fetchPublicRooms,
+  };
+};
+
+// Hook to fetch ALL rooms (for analytics)
+export const useAllRooms = () => {
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAllRooms = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiCall('/rooms'); // This now returns ALL rooms
+      setRooms(data.rooms);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch all rooms';
+      setError(errorMessage);
+      setRooms([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllRooms();
+  }, []);
+
+  return {
+    rooms,
+    loading,
+    error,
+    refetch: fetchAllRooms,
   };
 };
 

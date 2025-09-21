@@ -177,7 +177,7 @@ export function PublicRooms({ rooms, filteredRooms, searchQuery, filters }: Publ
                     size="sm"
                     className="text-white hover:bg-white/10 p-2 h-auto group/btn"
                     onClick={() => {
-                      window.location.href = `/canvas/${room.slug}`;
+                      window.location.href = `/canvas/${room.id}`;
                     }}
                   >
                     <span className="text-sm mr-1">Join</span>

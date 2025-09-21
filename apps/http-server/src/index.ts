@@ -167,7 +167,7 @@ app.post("/room", middleware, async (req: Request, res: Response): Promise<void>
 
 /**
  * @route GET /rooms
- * @desc Retrieve all public rooms ordered by creation date
+ * @desc Retrieve ALL rooms for analytics purposes
  * @access Protected (requires JWT)
  * @returns { rooms: Room[] }
  */
@@ -181,8 +181,54 @@ app.get("/rooms", middleware, async (req: Request, res: Response): Promise<void>
     }
 
     const rooms = await prismaClient.room.findMany({
+      orderBy: { id: "desc" },
+      select: {
+        id: true,
+        slug: true,
+        type: true,
+        createdAt: true,
+        admin: {
+          select: {
+            name: true
+          }
+        },
+        _count: {
+          select: {
+            chats: true
+          }
+        }
+      }
+    });
+
+    res.json({ rooms });
+  } catch (error) {
+    console.error("Fetch all rooms error:", error);
+    res.status(500).json({ message: "Failed to retrieve all rooms" });
+  }
+});
+
+/**
+ * @route GET /public-rooms
+ * @desc Retrieve all public rooms excluding those created by the authenticated user
+ * @access Protected (requires JWT)
+ * @returns { rooms: Room[] }
+ */
+app.get("/public-rooms", middleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Check if user is authenticated
+    //@ts-ignore
+    if (!req.userId) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const rooms = await prismaClient.room.findMany({
       where: {
         type: "PUBLIC",
+        NOT: {
+          //@ts-ignore
+          adminId: req.userId
+        }
       },
       orderBy: { id: "desc" },
       select: {

@@ -186,7 +186,7 @@ export function MyRooms({ rooms, filteredRooms, searchQuery, filters, onCreateCa
                     size="sm"
                     className="text-white hover:bg-white/10 p-2 h-auto group/btn"
                     onClick={() => {
-                      window.location.href = `/canvas/${room.slug}`;
+                      window.location.href = `/canvas/${room.id}`;
                     }}
                   >
                     <span className="text-sm mr-1">Open</span>
