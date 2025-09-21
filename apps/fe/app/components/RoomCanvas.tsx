@@ -9,8 +9,7 @@ export default function RoomCanvas({roomId}:{roomId: string}){
 
     useEffect(()=>{
         // Get token from localStorage (you should implement proper auth)
-        const token = localStorage.getItem('authToken') || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MDkxODBlMi1jODE4LTQxMTEtYTU4NC1iOWJkZTNlMjZiNzgiLCJpYXQiOjE3NDk3MjA0Mjh9.VS_t-T-TKd14BiUZdWub-Q5AdF0ya4JYUxvlfHVhsYg"
-        // Fix: Add the missing = in the URL
+        const token = localStorage.getItem('token')
         const ws = new WebSocket(`${WS_URL}?token=${token}`)
 
         ws.onopen = () =>{
