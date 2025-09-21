@@ -13,7 +13,6 @@ import { middleware } from "./middleware/auth";
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
-
 const app = express();
 
 // Middleware to parse JSON requests

@@ -1,7 +1,15 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { JWT_SECRET } from "@repo/backend-common/config";
+
 import jwt from "jsonwebtoken";
-import { prismaCLient } from '@repo/db';
+import { prismaClient } from '@repo/db';
+
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET as string;
+console.log(JWT_SECRET)
+
 
 // Create WebSocket server on port 8080
 const wss = new WebSocketServer({ port: 8080 });
@@ -107,7 +115,7 @@ wss.on('connection', function connection(ws, request) {
 
         // Save to DB
         try {
-          await prismaCLient.chat.create({
+          await prismaClient.chat.create({
             data: {
               roomId, // Now this is an integer
               message,
