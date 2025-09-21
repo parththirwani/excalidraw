@@ -47,9 +47,6 @@ export default function RoomCanvas({roomId}:{roomId: string}){
     }
 
     return <div>
-        <div style={{position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.7)', color: 'white', padding: '5px', borderRadius: '3px'}}>
-            Status: {connectionStatus} | Room: {roomId}
-        </div>
         <Canvas roomId={roomId} socket={socket} />
     </div>
 }

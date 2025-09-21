@@ -21,7 +21,7 @@ export class ShapeLogic {
     this.existingShapes = [];
     this.roomId = roomId;
     this.socket = socket;
-    
+
     this.init();
   }
 
@@ -67,7 +67,7 @@ export class ShapeLogic {
   }
 
   private setupInitialCanvas() {
-    this.ctx.fillStyle = "rgba(0,0,0,1)";
+    this.ctx.fillStyle = "#111111"; // Changed from rgba(0,0,0,1)
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
@@ -93,7 +93,7 @@ export class ShapeLogic {
   private handleMouseUp(e: MouseEvent) {
     if (!this.clicked) return;
     this.clicked = false;
-    
+
     const rect = this.canvas.getBoundingClientRect();
     const endX = e.clientX - rect.left;
     const endY = e.clientY - rect.top;
@@ -105,7 +105,7 @@ export class ShapeLogic {
     if (selectedTool === "rect") {
       const width = endX - this.startX;
       const height = endY - this.startY;
-      
+
       // Only create shape if it has meaningful dimensions
       if (Math.abs(width) > 5 && Math.abs(height) > 5) {
         shape = {
@@ -119,13 +119,13 @@ export class ShapeLogic {
     } else if (selectedTool === "circle") {
       const width = endX - this.startX;
       const height = endY - this.startY;
-      
+
       // Only create shape if it has meaningful dimensions
       if (Math.abs(width) > 5 && Math.abs(height) > 5) {
         const centerX = this.startX + width / 2;
         const centerY = this.startY + height / 2;
         const radius = Math.sqrt(width * width + height * height) / 2;
-        
+
         shape = {
           type: "circle",
           centerX,
@@ -136,7 +136,7 @@ export class ShapeLogic {
     } else if (selectedTool === "pencil") {
       // Add final point and create pencil shape
       this.currentPencilPoints.push({ x: endX, y: endY });
-      
+
       // Only create shape if there are enough points
       if (this.currentPencilPoints.length > 1) {
         shape = {
@@ -156,7 +156,7 @@ export class ShapeLogic {
 
   private handleMouseMove(e: MouseEvent) {
     if (!this.clicked) return;
-    
+
     const rect = this.canvas.getBoundingClientRect();
     const currentX = e.clientX - rect.left;
     const currentY = e.clientY - rect.top;
@@ -192,7 +192,7 @@ export class ShapeLogic {
 
       // Live preview for pencil - draw the current stroke
       this.clearCanvasAndRedraw();
-      
+
       // Draw current pencil stroke
       if (this.currentPencilPoints.length > 1) {
         this.ctx.strokeStyle = "rgba(255,255,255,1)";
@@ -201,11 +201,11 @@ export class ShapeLogic {
         this.ctx.lineJoin = "round";
         this.ctx.beginPath();
         this.ctx.moveTo(this.currentPencilPoints[0].x, this.currentPencilPoints[0].y);
-        
+
         for (let i = 1; i < this.currentPencilPoints.length; i++) {
           this.ctx.lineTo(this.currentPencilPoints[i].x, this.currentPencilPoints[i].y);
         }
-        
+
         this.ctx.stroke();
         this.ctx.closePath();
       }
@@ -217,7 +217,7 @@ export class ShapeLogic {
       this.socket.send(JSON.stringify({
         type: "chat",
         message: JSON.stringify(shape),
-        roomId: this.roomId  
+        roomId: this.roomId
       }));
     } catch (error) {
       console.error("Failed to send shape:", error);
@@ -226,9 +226,9 @@ export class ShapeLogic {
 
   private clearCanvasAndRedraw() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.fillStyle = "rgba(0,0,0,1)";
+    this.ctx.fillStyle = "#111111"; // Changed from rgba(0,0,0,1)
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    
+
     for (const shape of this.existingShapes) {
       if (shape.type === "rect") {
         this.ctx.strokeStyle = "rgba(255,255,255,1)";
@@ -246,15 +246,15 @@ export class ShapeLogic {
         this.ctx.lineWidth = 2;
         this.ctx.lineCap = "round";
         this.ctx.lineJoin = "round";
-        
+
         if (shape.points.length > 1) {
           this.ctx.beginPath();
           this.ctx.moveTo(shape.points[0].x, shape.points[0].y);
-          
+
           for (let i = 1; i < shape.points.length; i++) {
             this.ctx.lineTo(shape.points[i].x, shape.points[i].y);
           }
-          
+
           this.ctx.stroke();
           this.ctx.closePath();
         }
@@ -298,7 +298,7 @@ export class ShapeLogic {
       // Clear local shapes
       this.existingShapes = [];
       this.clearCanvasAndRedraw();
-      
+
       // Send clear all message to other clients via WebSocket
       this.socket.send(JSON.stringify({
         type: "clear_all",
