@@ -6,6 +6,7 @@ import { Eye, EyeOff, X, Mail, Lock, User, Check } from 'lucide-react';
 interface Props {
   onClose: () => void;
   onSwitchToSignIn: () => void;
+  onSignUpSuccess?: () => void; // New optional prop
 }
 
 interface PasswordStrength {
@@ -15,7 +16,7 @@ interface PasswordStrength {
   label: string;
 }
 
-export default function SignUpModal({ onClose, onSwitchToSignIn }: Props) {
+export default function SignUpModal({ onClose, onSwitchToSignIn, onSignUpSuccess }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -98,8 +99,13 @@ export default function SignUpModal({ onClose, onSwitchToSignIn }: Props) {
         localStorage.setItem('token', data.token);
       }
 
-      onClose();
-      router.push('/canvas');
+      // Call onSignUpSuccess if provided, otherwise close and redirect
+      if (onSignUpSuccess) {
+        onSignUpSuccess();
+      } else {
+        onClose();
+        router.push('/canvas');
+      }
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {
