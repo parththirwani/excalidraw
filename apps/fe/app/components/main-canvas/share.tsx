@@ -18,59 +18,58 @@ interface ShareModalProps {
   roomId: string;
   roomSlug?: string;
   roomType?: 'PUBLIC' | 'PRIVATE';
+  roomCode?: string;
 }
 
-// Generate a random 6-digit hexcode for private rooms
-const generatePrivateCode = (): string => {
-  return Math.random().toString(16).substr(2, 6).toUpperCase();
-};
-
-export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType }: ShareModalProps) {
+export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType, roomCode }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
-  const [privateCode, setPrivateCode] = useState<string>("");
   const [loading, setLoading] = useState(false);
-
-  // Generate private code when modal opens for private rooms
-  useEffect(() => {
-    if (isOpen && roomType === 'PRIVATE') {
-      setPrivateCode(generatePrivateCode());
-    }
-  }, [isOpen, roomType]);
+  const [codeRevealed, setCodeRevealed] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setCopied(false);
-      setPrivateCode("");
+      setCodeRevealed(false);
+      setCodeCopied(false);
     }
   }, [isOpen]);
 
   const getShareUrl = () => {
     const baseUrl = window.location.origin;
-    if (roomType === 'PRIVATE') {
-      return `${baseUrl}/canvas/${roomId}?code=${privateCode}`;
-    }
-    return `${baseUrl}/canvas/${roomId}`;
+    return `${baseUrl}/canvas/${roomSlug}`;
   };
 
-  const handleCopy = async () => {
+  const handleCopy = async (text: string, type: 'link' | 'code') => {
     try {
       setLoading(true);
-      const shareUrl = getShareUrl();
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(text);
+      
+      if (type === 'link') {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } else {
+        setCodeCopied(true);
+        setTimeout(() => setCodeCopied(false), 2000);
+      }
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
-      textArea.value = getShareUrl();
+      textArea.value = text;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      
+      if (type === 'link') {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } else {
+        setCodeCopied(true);
+        setTimeout(() => setCodeCopied(false), 2000);
+      }
     } finally {
       setLoading(false);
     }
@@ -86,8 +85,7 @@ export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType }: Shar
             Public
           </Badge>
         ),
-        description: "Anyone with the link can join this canvas",
-        color: "emerald"
+        description: "Anyone with the link can join this canvas"
       };
     } else {
       return {
@@ -98,13 +96,13 @@ export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType }: Shar
             Private
           </Badge>
         ),
-        description: "Only people with the access code can join this canvas",
-        color: "amber"
+        description: "Only people with the access code can join this canvas"
       };
     }
   };
 
   const roomInfo = getRoomTypeInfo();
+  const showCodeWarning = roomType === 'PRIVATE' && !roomCode;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -135,77 +133,124 @@ export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType }: Shar
           {roomType === 'PRIVATE' && (
             <div className="space-y-2">
               <Label className="text-sm font-medium text-white">Access Code</Label>
-              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <code className="text-lg font-mono text-amber-400 tracking-wider">
-                    {privateCode}
-                  </code>
-                  <div className="flex items-center gap-1">
-                    <Lock className="h-4 w-4 text-amber-400" />
+              {roomCode ? (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {/* Code display with blur effect */}
+                    <div className="flex-1 relative">
+                      <code 
+                        className={`text-lg font-mono text-amber-400 tracking-wider transition-all duration-200 cursor-pointer select-none ${
+                          !codeRevealed ? 'blur-sm hover:blur-none' : ''
+                        }`}
+                        onClick={() => setCodeRevealed(true)}
+                        title={!codeRevealed ? "Click to reveal code" : ""}
+                      >
+                        {roomCode}
+                      </code>
+                    </div>
+
+                    {/* Copy button */}
+                    <Button
+                      onClick={() => handleCopy(roomCode, 'code')}
+                      disabled={loading}
+                      size="sm"
+                      className={`px-2 py-1 h-auto transition-colors ${
+                        codeCopied 
+                          ? 'bg-emerald-600 hover:bg-emerald-700' 
+                          : 'bg-amber-500 hover:bg-amber-600 text-black'
+                      }`}
+                    >
+                      {loading ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : codeCopied ? (
+                        <CheckCircle className="h-3 w-3" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-amber-400/80 mt-2">
+                    {!codeRevealed 
+                      ? "Click on the blurred code to reveal it"
+                      : "Share this code with people you want to invite"
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-red-400 font-medium text-sm">No access code available</p>
+                      <p className="text-red-400/80 text-xs mt-1">
+                        This private room may not be properly configured
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <p className="text-xs text-amber-400/80 mt-1">
-                  Share this code with people you want to invite
-                </p>
+              )}
+            </div>
+          )}
+
+          {/* Share Link - Show for all valid rooms */}
+          {!showCodeWarning && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-white">Share Link</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={getShareUrl()}
+                  readOnly
+                  className="bg-white/5 border-white/10 text-white text-sm font-mono"
+                />
+                <Button
+                  onClick={() => handleCopy(getShareUrl(), 'link')}
+                  disabled={loading}
+                  className={`px-3 transition-colors ${
+                    copied 
+                      ? 'bg-emerald-600 hover:bg-emerald-700' 
+                      : 'bg-white text-black hover:bg-gray-100'
+                  }`}
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : copied ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
             </div>
           )}
 
-          {/* Share Link */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-white">Share Link</Label>
-            <div className="flex gap-2">
-              <Input
-                value={getShareUrl()}
-                readOnly
-                className="bg-white/5 border-white/10 text-white text-sm font-mono"
-              />
-              <Button
-                onClick={handleCopy}
-                disabled={loading}
-                className={`px-3 transition-colors ${
-                  copied 
-                    ? 'bg-emerald-600 hover:bg-emerald-700' 
-                    : 'bg-white text-black hover:bg-gray-100'
-                }`}
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : copied ? (
-                  <CheckCircle className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-
           {/* Instructions */}
-          <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-400">
-                {roomType === 'PRIVATE' ? (
-                  <>
-                    <p className="font-medium mb-1">Private Canvas</p>
-                    <p>People will need both the link and the access code to join this canvas.</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="font-medium mb-1">Public Canvas</p>
-                    <p>Anyone with this link can join and collaborate on this canvas.</p>
-                  </>
-                )}
+          {!showCodeWarning && (
+            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-blue-400">
+                  {roomType === 'PRIVATE' ? (
+                    <>
+                      <p className="font-medium mb-1">Private Canvas</p>
+                      <p>Share the link and access code separately. People will need to enter the code when they visit the canvas.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-medium mb-1">Public Canvas</p>
+                      <p>Anyone with this link can join and collaborate on this canvas.</p>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="flex justify-end">
           <Button
             variant="outline"
             onClick={onClose}
-            className="border-white/10 text-gray-400 hover:text-white hover:border-white/20 bg-transparent"
+            className="border-white/10 text-gray-400 bg-transparent"
           >
             Close
           </Button>

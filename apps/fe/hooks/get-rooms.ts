@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 
-// Types
+// Updated Types to include code
 interface Room {
   id: number;
   slug: string;
   type: 'PUBLIC' | 'PRIVATE';
+  code?: string; // Added code field for private rooms
   createdAt: string;
   admin?: {
     name: string;
@@ -13,6 +14,7 @@ interface Room {
     chats: number;
   };
 }
+
 interface SingleRoom {
   id: number;
   slug: string;
@@ -21,11 +23,13 @@ interface SingleRoom {
   admin: {
     name: string;
   };
+  code: string
 }
 
 interface SingleRoomApiResponse {
   room: SingleRoom;
 }
+
 interface User {
   id: string;
   name: string;
@@ -43,6 +47,14 @@ interface UserApiResponse {
 interface ApiError {
   message: string;
   errors?: any[];
+}
+
+// Updated CreateRoom response interface
+interface CreateRoomResponse {
+  roomId: number;
+  slug: string;
+  type: 'PUBLIC' | 'PRIVATE';
+  code?: string; // Include code field
 }
 
 // Base API configuration
@@ -147,7 +159,7 @@ export const useCurrentUser = () => {
   };
 };
 
-// Hook to fetch user's own rooms
+// Updated Hook to fetch user's own rooms (includes codes for private rooms)
 export const useMyRooms = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,6 +170,14 @@ export const useMyRooms = () => {
       setLoading(true);
       setError(null);
       const data = await apiCall('/my-rooms');
+      
+      // Log private room codes for debugging
+      data.rooms.forEach(room => {
+        if (room.type === 'PRIVATE' && room.code) {
+          console.log(`🔒 Private Room "${room.slug}" - Code: ${room.code}`);
+        }
+      });
+      
       setRooms(data.rooms);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch your rooms';
@@ -190,7 +210,7 @@ export const usePublicRooms = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiCall('/public-rooms'); // Changed from '/rooms' to '/public-rooms'
+      const data = await apiCall('/public-rooms');
       setRooms(data.rooms);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch public rooms';
@@ -223,7 +243,7 @@ export const useAllRooms = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiCall('/rooms'); // This now returns ALL rooms
+      const data = await apiCall('/rooms');
       setRooms(data.rooms);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch all rooms';
@@ -268,12 +288,12 @@ export const useRooms = () => {
   };
 };
 
-// Hook to create a new room
+// Updated Hook to create a new room (handles code response)
 export const useCreateRoom = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createRoom = async (roomData: { name: string; type: 'PUBLIC' | 'PRIVATE' }) => {
+  const createRoom = async (roomData: { name: string; type: 'PUBLIC' | 'PRIVATE' }): Promise<CreateRoomResponse> => {
     try {
       setLoading(true);
       setError(null);
@@ -298,7 +318,15 @@ export const useCreateRoom = () => {
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result: CreateRoomResponse = await response.json();
+      
+      // Log the room creation result, especially for private rooms
+      if (result.type === 'PRIVATE' && result.code) {
+        console.log(`✅ Created Private Room "${result.slug}" - Code: ${result.code}`);
+      } else {
+        console.log(`✅ Created Public Room "${result.slug}"`);
+      }
+      
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create room';

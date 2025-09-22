@@ -7,6 +7,8 @@ import { Request, Response } from "express";
 import cors from "cors"
 import dotenv from "dotenv";
 import { middleware } from "./middleware/auth";
+import { generateUniqueRoomCode } from "./utils/privateCode";
+
 
 dotenv.config();
 
@@ -113,12 +115,14 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+
+
 /**
  * @route POST /room
  * @desc Create a new room with specified type and slug
  * @access Protected (requires JWT)
  * @body { name: string, type: "PUBLIC" | "PRIVATE" }
- * @returns { roomId: number, slug: string, type: string }
+ * @returns { roomId: number, slug: string, type: string, code?: string }
  */
 app.post("/room", middleware, async (req: Request, res: Response): Promise<void> => {
   try {
@@ -139,21 +143,36 @@ app.post("/room", middleware, async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    // Generate code for private rooms
+    let code: string | null = null;
+    if (parsed.data.type === "PRIVATE") {
+      code = await generateUniqueRoomCode();
+    }
+
     // Create new room
     const newRoom = await prismaClient.room.create({
       data: {
         slug: parsed.data.name,
         //@ts-ignore
         adminId: req.userId,
-        type: parsed.data.type
+        type: parsed.data.type,
+        code: code
       },
     });
 
-    res.status(201).json({
+    // Prepare response - only include code for the room creator
+    const response: any = {
       roomId: newRoom.id,
       slug: newRoom.slug,
       type: newRoom.type
-    });
+    };
+
+    // Only return code if room is private (code will only exist for private rooms)
+    if (newRoom.code) {
+      response.code = newRoom.code;
+    }
+
+    res.status(201).json(response);
   } catch (error: any) {
     console.error("Room creation error:", error);
 
@@ -164,7 +183,6 @@ app.post("/room", middleware, async (req: Request, res: Response): Promise<void>
     res.status(500).json({ message: "Failed to create room" });
   }
 });
-
 /**
  * @route GET /rooms
  * @desc Retrieve ALL rooms for analytics purposes
@@ -281,6 +299,7 @@ app.get("/my-rooms", middleware, async (req: Request, res: Response): Promise<vo
         id: true,
         slug: true,
         type: true,
+        code: true, // Including code since this is the room creator
         createdAt: true,
         _count: {
           select: {
@@ -296,7 +315,6 @@ app.get("/my-rooms", middleware, async (req: Request, res: Response): Promise<vo
     res.status(500).json({ message: "Failed to retrieve your rooms" });
   }
 });
-
 /**
  * @route GET /room/:slug
  * @desc Retrieve room details by slug identifier

@@ -13,11 +13,13 @@ type Shape = "circle" | "rect" | "pencil";
 export function Canvas({
   slug,
   roomId,
-  socket
+  socket,
+  roomCode // Add roomCode prop to receive from URL params or dashboard
 }: {
   slug: string;    // Used for room data fetching
   roomId: string;  // Used for backend operations (shapes, WebSocket)
   socket: WebSocket;
+  roomCode?: string; // Optional room code passed from dashboard/URL
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const shapeLogicRef = useRef<ShapeLogic | null>(null);
@@ -25,15 +27,31 @@ export function Canvas({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
+  // Extract room code from URL if not provided as prop
+  const [actualRoomCode, setActualRoomCode] = useState<string | undefined>(roomCode);
+
+  useEffect(() => {
+    if (!roomCode) {
+      // Try to get room code from URL params if not passed as prop
+      const urlParams = new URLSearchParams(window.location.search);
+      const codeFromUrl = urlParams.get('code');
+      if (codeFromUrl) {
+        setActualRoomCode(codeFromUrl);
+        console.log(`Room code extracted from URL: ${codeFromUrl}`);
+      }
+    }
+  }, [roomCode]);
+
   // Fetch room details using slug to get room metadata
   const { room, loading: roomLoading, error: roomError } = useRoom(slug);
 
-  // Log room type when room data is loaded
+  // Log room type and code when room data is loaded
   useEffect(() => {
     if (room && !roomLoading) {
-      console.log(`Canvas entered - Room Type: ${room.type}, ID: ${room.id}, Slug: ${room.slug}`);
+      const finalRoomCode = actualRoomCode || room.code;
+      console.log(`Canvas entered - Room Type: ${room.type}, ID: ${room.id}, Slug: ${room.slug}${finalRoomCode ? `, Code: ${finalRoomCode}` : ''}`);
     }
-  }, [room, roomLoading]);
+  }, [room, roomLoading, actualRoomCode]);
 
   useEffect(() => {
     // @ts-ignore
@@ -69,6 +87,9 @@ export function Canvas({
     // Add your library logic here
     console.log("Library clicked");
   };
+
+  // Determine the final room code to use
+  const finalRoomCode = actualRoomCode || room?.code;
 
   return (
     <div className="relative bg-gray-900 text-white" style={{
@@ -129,13 +150,14 @@ export function Canvas({
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Share Modal */}
+      {/* Share Modal - Pass the room code (from URL, prop, or room data) */}
       <ShareModal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
         roomId={roomId}
-        roomSlug={room?.slug || slug} // Use room.slug from fetched data, fallback to slug param
+        roomSlug={room?.slug || slug}
         roomType={room?.type}
+        roomCode={finalRoomCode} // Use the final determined room code
       />
     </div>
   );

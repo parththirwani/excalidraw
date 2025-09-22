@@ -2,11 +2,12 @@ import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import { Plus, Eye, Clock, Users, Globe, Lock, ArrowRight } from "lucide-react";
 
-// Types
+// Updated Types to include code
 interface Room {
   id: number;
   slug: string;
   type: 'PUBLIC' | 'PRIVATE';
+  code?: string; // Added code field
   createdAt: string;
   admin?: {
     name: string;
@@ -24,7 +25,7 @@ interface MyRoomsProps {
     showPublic: boolean;
     showPrivate: boolean;
   };
-  onCreateCanvas?: () => void; // Add this prop
+  onCreateCanvas?: () => void;
 }
 
 export function MyRooms({ rooms, filteredRooms, searchQuery, filters, onCreateCanvas }: MyRoomsProps) {
@@ -51,11 +52,16 @@ export function MyRooms({ rooms, filteredRooms, searchQuery, filters, onCreateCa
   };
 
   const handleRoomClick = (room: Room) => {
-    // Log the room type when clicked
-    console.log(`Room clicked - Type: ${room.type}, ID: ${room.id}, Slug: ${room.slug}`);
+    // Log the room type and code when clicked
+    console.log(`Room clicked - Type: ${room.type}, ID: ${room.id}, Slug: ${room.slug}${room.code ? `, Code: ${room.code}` : ''}`);
     
-    // Navigate to the canvas
-    window.location.href = `/canvas/${room.slug}`;
+    // Navigate to the canvas with code as URL parameter for private rooms
+    const baseUrl = `/canvas/${room.slug}`;
+    const urlWithCode = room.type === 'PRIVATE' && room.code 
+      ? `${baseUrl}?code=${room.code}` 
+      : baseUrl;
+    
+    window.location.href = urlWithCode;
   };
 
   const getEmptyStateMessage = () => {
@@ -93,7 +99,7 @@ export function MyRooms({ rooms, filteredRooms, searchQuery, filters, onCreateCa
   };
 
   const emptyState = getEmptyStateMessage();
-  const showCreateButton = rooms.length === 0; // Only show create button when no rooms exist at all
+  const showCreateButton = rooms.length === 0;
 
   return (
     <div className="mb-8">
@@ -147,6 +153,15 @@ export function MyRooms({ rooms, filteredRooms, searchQuery, filters, onCreateCa
                     {room._count?.chats || 0}
                   </Badge>
                 </div>
+                {/* Show code badge for private rooms */}
+                {room.type === 'PRIVATE' && room.code && (
+                  <div className="absolute top-3 left-3">
+                    <Badge variant="outline" className="bg-amber-500/20 border-amber-500/40 text-amber-300 text-xs">
+                      <Lock className="h-3 w-3 mr-1" />
+                      {room.code}
+                    </Badge>
+                  </div>
+                )}
               </div>
 
               {/* Content */}
@@ -195,7 +210,7 @@ export function MyRooms({ rooms, filteredRooms, searchQuery, filters, onCreateCa
                     size="sm"
                     className="text-white hover:bg-white/10 p-2 h-auto group/btn"
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevent triggering the card click
+                      e.stopPropagation();
                       handleRoomClick(room);
                     }}
                   >
