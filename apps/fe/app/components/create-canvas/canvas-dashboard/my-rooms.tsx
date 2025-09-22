@@ -50,6 +50,14 @@ export function MyRooms({ rooms, filteredRooms, searchQuery, filters, onCreateCa
     return gradients[Math.floor(Math.random() * gradients.length)];
   };
 
+  const handleRoomClick = (room: Room) => {
+    // Log the room type when clicked
+    console.log(`Room clicked - Type: ${room.type}, ID: ${room.id}, Slug: ${room.slug}`);
+    
+    // Navigate to the canvas
+    window.location.href = `/canvas/${room.slug}`;
+  };
+
   const getEmptyStateMessage = () => {
     if (rooms.length === 0) {
       return {
@@ -127,8 +135,9 @@ export function MyRooms({ rooms, filteredRooms, searchQuery, filters, onCreateCa
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredRooms.map((room) => (
             <div
-              key={room.id}
+              key={room.slug}
               className="bg-white/5 rounded-xl border border-white/10 overflow-hidden hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group"
+              onClick={() => handleRoomClick(room)}
             >
               {/* Thumbnail */}
               <div className={`h-32 bg-gradient-to-br ${getRandomGradient()} relative`}>
@@ -185,8 +194,9 @@ export function MyRooms({ rooms, filteredRooms, searchQuery, filters, onCreateCa
                     variant="ghost"
                     size="sm"
                     className="text-white hover:bg-white/10 p-2 h-auto group/btn"
-                    onClick={() => {
-                      window.location.href = `/canvas/${room.id}`;
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering the card click
+                      handleRoomClick(room);
                     }}
                   >
                     <span className="text-sm mr-1">Open</span>

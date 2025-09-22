@@ -60,6 +60,15 @@ export function PublicRooms({ rooms, filteredRooms, searchQuery, filters }: Publ
     return null;
   };
 
+  // Add room click handler with logging
+  const handleRoomClick = (room: Room) => {
+    // Log the room type when clicked
+    console.log(`Room entered - Type: ${room.type}, ID: ${room.id}, Slug: ${room.slug}`);
+    
+    // Navigate to the canvas using slug instead of roomId
+    window.location.href = `/canvas/${room.slug}`;
+  };
+
   const getEmptyStateMessage = () => {
     if (rooms.length === 0) {
       return {
@@ -124,6 +133,7 @@ export function PublicRooms({ rooms, filteredRooms, searchQuery, filters }: Publ
             <div
               key={room.id}
               className="bg-white/5 rounded-xl border border-white/10 overflow-hidden hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group"
+              onClick={() => handleRoomClick(room)}
             >
               {/* Thumbnail */}
               <div className={`h-32 bg-gradient-to-br ${getRandomGradient()} relative`}>
@@ -176,8 +186,9 @@ export function PublicRooms({ rooms, filteredRooms, searchQuery, filters }: Publ
                     variant="ghost"
                     size="sm"
                     className="text-white hover:bg-white/10 p-2 h-auto group/btn"
-                    onClick={() => {
-                      window.location.href = `/canvas/${room.id}`;
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering the card click
+                      handleRoomClick(room);
                     }}
                   >
                     <span className="text-sm mr-1">Join</span>

@@ -20,21 +20,72 @@ interface CreateCanvasModalProps {
   onRoomCreated?: () => void;
 }
 
+// Slug validation helper functions
+const isValidSlug = (slug: string): boolean => {
+  // Slug should only contain lowercase letters, numbers, and hyphens
+  // Should not start or end with hyphen
+  // Should not have consecutive hyphens
+  const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  return slugRegex.test(slug) && slug.length >= 2 && slug.length <= 50;
+};
+
+const sanitizeSlug = (input: string): string => {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+};
+
+const getSlugErrorMessage = (slug: string): string | null => {
+  if (!slug) return "Canvas name is required";
+  if (slug.length < 2) return "Canvas name must be at least 2 characters long";
+  if (slug.length > 50) return "Canvas name must be 50 characters or less";
+  if (slug.startsWith('-') || slug.endsWith('-')) return "Canvas name cannot start or end with a hyphen";
+  if (slug.includes('--')) return "Canvas name cannot contain consecutive hyphens";
+  if (!/^[a-z0-9-]+$/.test(slug)) return "Canvas name can only contain lowercase letters, numbers, and hyphens";
+  return null;
+};
+
 export function CreateCanvasModal({ isOpen, onClose, onRoomCreated }: CreateCanvasModalProps) {
   const [canvasName, setCanvasName] = useState("");
   const [canvasMode, setCanvasMode] = useState("public");
   const [success, setSuccess] = useState(false);
+  const [slugError, setSlugError] = useState<string | null>(null);
   
   const { createRoom, loading, error } = useCreateRoom();
+
+  const handleCanvasNameChange = (value: string) => {
+    setCanvasName(value);
+    
+    // Real-time validation
+    const sanitized = sanitizeSlug(value);
+    const errorMessage = getSlugErrorMessage(sanitized);
+    setSlugError(errorMessage);
+  };
 
   const handleCreate = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
-    if (!canvasName.trim()) return;
+    const sanitizedSlug = sanitizeSlug(canvasName);
+    
+    if (!sanitizedSlug.trim()) {
+      setSlugError("Canvas name is required");
+      return;
+    }
+
+    // Final validation before creating
+    const validationError = getSlugErrorMessage(sanitizedSlug);
+    if (validationError) {
+      setSlugError(validationError);
+      return;
+    }
 
     try {
       await createRoom({
-        name: canvasName.trim(),
+        name: sanitizedSlug, // Use sanitized slug
         type: canvasMode === 'public' ? 'PUBLIC' : 'PRIVATE'
       });
       
@@ -45,6 +96,7 @@ export function CreateCanvasModal({ isOpen, onClose, onRoomCreated }: CreateCanv
         setSuccess(false);
         setCanvasName("");
         setCanvasMode('public');
+        setSlugError(null);
         onClose();
         if (onRoomCreated) {
           onRoomCreated();
@@ -63,8 +115,13 @@ export function CreateCanvasModal({ isOpen, onClose, onRoomCreated }: CreateCanv
     setCanvasName("");
     setCanvasMode('public');
     setSuccess(false);
+    setSlugError(null);
     onClose();
   };
+
+  // Show preview of sanitized slug
+  const previewSlug = canvasName ? sanitizeSlug(canvasName) : "";
+  const isFormValid = canvasName.trim() && !slugError && !getSlugErrorMessage(previewSlug);
 
   if (success) {
     return (
@@ -110,13 +167,35 @@ export function CreateCanvasModal({ isOpen, onClose, onRoomCreated }: CreateCanv
               <Input
                 id="canvas-name"
                 type="text"
-                placeholder="Enter canvas name..."
+                placeholder="my-awesome-canvas"
                 value={canvasName}
-                onChange={(e) => setCanvasName(e.target.value)}
-                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-white/20 focus:bg-white/10"
+                onChange={(e) => handleCanvasNameChange(e.target.value)}
+                className={`bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-white/20 focus:bg-white/10 ${
+                  slugError ? 'border-red-500/50 focus:border-red-500/50' : ''
+                }`}
                 disabled={loading}
                 required
               />
+              
+              {/* Slug Preview */}
+              {previewSlug && previewSlug !== canvasName && (
+                <div className="text-xs text-gray-400">
+                  URL Preview: /canvas/<span className="text-white">{previewSlug}</span>
+                </div>
+              )}
+              
+              {/* Slug Error */}
+              {slugError && (
+                <div className="flex items-center gap-1 text-red-400 text-xs">
+                  <AlertCircle className="h-3 w-3" />
+                  {slugError}
+                </div>
+              )}
+              
+              {/* Slug Guidelines */}
+              <div className="text-xs text-gray-500">
+                Use lowercase letters, numbers, and hyphens. Spaces will be converted to hyphens.
+              </div>
             </div>
 
             {/* Visibility */}
@@ -171,7 +250,7 @@ export function CreateCanvasModal({ isOpen, onClose, onRoomCreated }: CreateCanv
             </Button>
             <Button
               type="submit"
-              disabled={loading || !canvasName.trim()}
+              disabled={loading || !isFormValid}
               className="bg-white text-black hover:bg-gray-100 font-medium min-w-[100px]"
             >
               {loading ? (

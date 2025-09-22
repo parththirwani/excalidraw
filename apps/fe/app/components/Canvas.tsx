@@ -4,21 +4,36 @@ import { ShapeLogic } from "../draw/ShapeLogic";
 import Toolbar from "./main-canvas/toolbar";
 import ZoomControls from "./main-canvas/zoom-controls";
 import Sidebar from "./main-canvas/sidebar";
+import { useRoom } from "@/hooks/get-rooms";
+import { ShareModal } from "./main-canvas/share";
 
 type Shape = "circle" | "rect" | "pencil";
 
 // Main Canvas Component
 export function Canvas({
+  slug,
   roomId,
   socket
 }: {
-  roomId: string;
+  slug: string;    // Used for room data fetching
+  roomId: string;  // Used for backend operations (shapes, WebSocket)
   socket: WebSocket;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const shapeLogicRef = useRef<ShapeLogic | null>(null);
   const [selectedTool, setSelectedTool] = useState<Shape>("circle");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  // Fetch room details using slug to get room metadata
+  const { room, loading: roomLoading, error: roomError } = useRoom(slug);
+
+  // Log room type when room data is loaded
+  useEffect(() => {
+    if (room && !roomLoading) {
+      console.log(`Canvas entered - Room Type: ${room.type}, ID: ${room.id}, Slug: ${room.slug}`);
+    }
+  }, [room, roomLoading]);
 
   useEffect(() => {
     // @ts-ignore
@@ -28,6 +43,7 @@ export function Canvas({
   useEffect(() => {
     if (canvasRef.current) {
       try {
+        // Use roomId for ShapeLogic operations (backend communication)
         shapeLogicRef.current = new ShapeLogic(canvasRef.current, roomId, socket);
       } catch (error) {
         console.error("Failed to initialize ShapeLogic:", error);
@@ -46,8 +62,7 @@ export function Canvas({
   };
 
   const handleShare = () => {
-    // Add your share logic here
-    console.log("Share clicked");
+    setShareModalOpen(true);
   };
 
   const handleLibrary = () => {
@@ -83,14 +98,14 @@ export function Canvas({
       <div className="fixed top-4 right-4 z-50 flex gap-2">
         <button
           onClick={handleShare}
-          className="px-3 py-2 rounded-lg border border-gray-700 hover:bg-gray-600 transition-colors text-[#1d1d24] flex items-center gap-2"
+          disabled={roomLoading} // Disable while room data is loading
+          className="px-3 py-2 rounded-lg border border-gray-700 hover:bg-gray-600 transition-colors text-[#1d1d24] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: '#a8a5ff' }}
           title="Share"
         >
           <Share size={16} />
           <span className="text-sm">Share</span>
         </button>
-        
         <button
           onClick={handleLibrary}
           className="px-3 py-2 rounded-lg border border-gray-700 hover:bg-gray-600 transition-colors text-gray-300 flex items-center gap-2"
@@ -112,6 +127,15 @@ export function Canvas({
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        roomId={roomId}
+        roomSlug={room?.slug || slug} // Use room.slug from fetched data, fallback to slug param
+        roomType={room?.type}
       />
     </div>
   );

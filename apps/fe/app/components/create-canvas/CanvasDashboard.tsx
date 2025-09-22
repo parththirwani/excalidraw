@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { CreateCanvasModal } from "./CreateCanvasModal";
-import { useRooms, useCurrentUser } from "@/hooks/get-rooms"; // Import useCurrentUser
+import { useRooms, useCurrentUser } from "@/hooks/get-rooms"; 
 import { DashboardHeader } from "./canvas-dashboard/header";
 import { MyRooms } from "./canvas-dashboard/my-rooms";
 import { PublicRooms } from "./canvas-dashboard/public-rooms";
@@ -131,7 +131,7 @@ export function CanvasDashboard() {
           filteredRooms={filteredMyRooms}
           searchQuery={searchQuery}
           filters={filters}
-          onCreateCanvas={handleCreateCanvas} // Pass the handler here
+          onCreateCanvas={handleCreateCanvas} 
         />
         
         <PublicRooms

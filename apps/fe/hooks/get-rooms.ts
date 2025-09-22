@@ -13,7 +13,19 @@ interface Room {
     chats: number;
   };
 }
+interface SingleRoom {
+  id: number;
+  slug: string;
+  type: 'PUBLIC' | 'PRIVATE';
+  createdAt: string;
+  admin: {
+    name: string;
+  };
+}
 
+interface SingleRoomApiResponse {
+  room: SingleRoom;
+}
 interface User {
   id: string;
   name: string;
@@ -301,5 +313,56 @@ export const useCreateRoom = () => {
     createRoom,
     loading,
     error,
+  };
+};
+
+export const useRoom = (slug: string) => {
+  const [room, setRoom] = useState<SingleRoom | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchRoom = async () => {
+    if (!slug) {
+      setError('Room slug is required');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE_URL}/room/${slug}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData: ApiError = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data: SingleRoomApiResponse = await response.json();
+      setRoom(data.room);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch room';
+      setError(errorMessage);
+      setRoom(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRoom();
+  }, [slug]);
+
+  return {
+    room,
+    loading,
+    error,
+    refetch: fetchRoom,
   };
 };
