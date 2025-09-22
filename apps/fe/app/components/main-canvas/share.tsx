@@ -45,7 +45,7 @@ export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType, roomCo
     try {
       setLoading(true);
       await navigator.clipboard.writeText(text);
-      
+
       if (type === 'link') {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -62,7 +62,7 @@ export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType, roomCo
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      
+
       if (type === 'link') {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -138,10 +138,9 @@ export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType, roomCo
                   <div className="flex items-center gap-3">
                     {/* Code display with blur effect */}
                     <div className="flex-1 relative">
-                      <code 
-                        className={`text-lg font-mono text-amber-400 tracking-wider transition-all duration-200 cursor-pointer select-none ${
-                          !codeRevealed ? 'blur-sm hover:blur-none' : ''
-                        }`}
+                      <code
+                        className={`text-lg font-mono text-amber-400 tracking-wider transition-all duration-200 cursor-pointer select-none ${!codeRevealed ? 'blur-sm hover:blur-none' : ''
+                          }`}
                         onClick={() => setCodeRevealed(true)}
                         title={!codeRevealed ? "Click to reveal code" : ""}
                       >
@@ -154,11 +153,10 @@ export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType, roomCo
                       onClick={() => handleCopy(roomCode, 'code')}
                       disabled={loading}
                       size="sm"
-                      className={`px-2 py-1 h-auto transition-colors ${
-                        codeCopied 
-                          ? 'bg-emerald-600 hover:bg-emerald-700' 
+                      className={`px-2 py-1 h-auto transition-colors ${codeCopied
+                          ? 'bg-emerald-600 hover:bg-emerald-700'
                           : 'bg-amber-500 hover:bg-amber-600 text-black'
-                      }`}
+                        }`}
                     >
                       {loading ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -170,7 +168,7 @@ export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType, roomCo
                     </Button>
                   </div>
                   <p className="text-xs text-amber-400/80 mt-2">
-                    {!codeRevealed 
+                    {!codeRevealed
                       ? "Click on the blurred code to reveal it"
                       : "Share this code with people you want to invite"
                     }
@@ -183,7 +181,7 @@ export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType, roomCo
                     <div>
                       <p className="text-red-400 font-medium text-sm">No access code available</p>
                       <p className="text-red-400/80 text-xs mt-1">
-                        This private room may not be properly configured
+                        This private room is not properly configured. Please ask the room admin for assistance.
                       </p>
                     </div>
                   </div>
@@ -205,11 +203,10 @@ export function ShareModal({ isOpen, onClose, roomId, roomSlug, roomType, roomCo
                 <Button
                   onClick={() => handleCopy(getShareUrl(), 'link')}
                   disabled={loading}
-                  className={`px-3 transition-colors ${
-                    copied 
-                      ? 'bg-emerald-600 hover:bg-emerald-700' 
+                  className={`px-3 transition-colors ${copied
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
                       : 'bg-white text-black hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

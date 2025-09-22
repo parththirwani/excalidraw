@@ -27,31 +27,15 @@ export function Canvas({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
-  // Extract room code from URL if not provided as prop
-  const [actualRoomCode, setActualRoomCode] = useState<string | undefined>(roomCode);
-
-  useEffect(() => {
-    if (!roomCode) {
-      // Try to get room code from URL params if not passed as prop
-      const urlParams = new URLSearchParams(window.location.search);
-      const codeFromUrl = urlParams.get('code');
-      if (codeFromUrl) {
-        setActualRoomCode(codeFromUrl);
-        console.log(`Room code extracted from URL: ${codeFromUrl}`);
-      }
-    }
-  }, [roomCode]);
-
   // Fetch room details using slug to get room metadata
   const { room, loading: roomLoading, error: roomError } = useRoom(slug);
 
   // Log room type and code when room data is loaded
   useEffect(() => {
     if (room && !roomLoading) {
-      const finalRoomCode = actualRoomCode || room.code;
-      console.log(`Canvas entered - Room Type: ${room.type}, ID: ${room.id}, Slug: ${room.slug}${finalRoomCode ? `, Code: ${finalRoomCode}` : ''}`);
+      console.log(`Canvas entered - Room Type: ${room.type}, ID: ${room.id}, Slug: ${room.slug}${roomCode ? `, Code: ${roomCode}` : ''}`);
     }
-  }, [room, roomLoading, actualRoomCode]);
+  }, [room, roomLoading, roomCode]);
 
   useEffect(() => {
     // @ts-ignore
@@ -87,9 +71,6 @@ export function Canvas({
     // Add your library logic here
     console.log("Library clicked");
   };
-
-  // Determine the final room code to use
-  const finalRoomCode = actualRoomCode || room?.code;
 
   return (
     <div className="relative bg-gray-900 text-white" style={{
@@ -150,14 +131,14 @@ export function Canvas({
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Share Modal - Pass the room code (from URL, prop, or room data) */}
+      {/* Share Modal - Pass the backend-generated room code */}
       <ShareModal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
         roomId={roomId}
         roomSlug={room?.slug || slug}
         roomType={room?.type}
-        roomCode={finalRoomCode} // Use the final determined room code
+        roomCode={roomCode} // Pass the actual room code from backend
       />
     </div>
   );

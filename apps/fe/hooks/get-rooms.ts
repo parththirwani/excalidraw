@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 
-// Updated Types to include code
+// Types
 interface Room {
   id: number;
   slug: string;
   type: 'PUBLIC' | 'PRIVATE';
-  code?: string; // Added code field for private rooms
   createdAt: string;
   admin?: {
     name: string;
@@ -14,7 +13,6 @@ interface Room {
     chats: number;
   };
 }
-
 interface SingleRoom {
   id: number;
   slug: string;
@@ -23,13 +21,11 @@ interface SingleRoom {
   admin: {
     name: string;
   };
-  code: string
 }
 
 interface SingleRoomApiResponse {
   room: SingleRoom;
 }
-
 interface User {
   id: string;
   name: string;
@@ -47,14 +43,6 @@ interface UserApiResponse {
 interface ApiError {
   message: string;
   errors?: any[];
-}
-
-// Updated CreateRoom response interface
-interface CreateRoomResponse {
-  roomId: number;
-  slug: string;
-  type: 'PUBLIC' | 'PRIVATE';
-  code?: string; // Include code field
 }
 
 // Base API configuration
@@ -159,7 +147,7 @@ export const useCurrentUser = () => {
   };
 };
 
-// Updated Hook to fetch user's own rooms (includes codes for private rooms)
+// Hook to fetch user's own rooms
 export const useMyRooms = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,14 +158,6 @@ export const useMyRooms = () => {
       setLoading(true);
       setError(null);
       const data = await apiCall('/my-rooms');
-      
-      // Log private room codes for debugging
-      data.rooms.forEach(room => {
-        if (room.type === 'PRIVATE' && room.code) {
-          console.log(`🔒 Private Room "${room.slug}" - Code: ${room.code}`);
-        }
-      });
-      
       setRooms(data.rooms);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch your rooms';
@@ -210,7 +190,7 @@ export const usePublicRooms = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiCall('/public-rooms');
+      const data = await apiCall('/public-rooms'); // Changed from '/rooms' to '/public-rooms'
       setRooms(data.rooms);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch public rooms';
@@ -243,7 +223,7 @@ export const useAllRooms = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiCall('/rooms');
+      const data = await apiCall('/rooms'); // This now returns ALL rooms
       setRooms(data.rooms);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch all rooms';
@@ -288,12 +268,12 @@ export const useRooms = () => {
   };
 };
 
-// Updated Hook to create a new room (handles code response)
+// Hook to create a new room
 export const useCreateRoom = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createRoom = async (roomData: { name: string; type: 'PUBLIC' | 'PRIVATE' }): Promise<CreateRoomResponse> => {
+  const createRoom = async (roomData: { name: string; type: 'PUBLIC' | 'PRIVATE' }) => {
     try {
       setLoading(true);
       setError(null);
@@ -318,15 +298,7 @@ export const useCreateRoom = () => {
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
-      const result: CreateRoomResponse = await response.json();
-      
-      // Log the room creation result, especially for private rooms
-      if (result.type === 'PRIVATE' && result.code) {
-        console.log(`✅ Created Private Room "${result.slug}" - Code: ${result.code}`);
-      } else {
-        console.log(`✅ Created Public Room "${result.slug}"`);
-      }
-      
+      const result = await response.json();
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create room';
@@ -392,5 +364,88 @@ export const useRoom = (slug: string) => {
     loading,
     error,
     refetch: fetchRoom,
+  };
+};
+
+interface JoinRoomResponse {
+  room: {
+    id: number;
+    slug: string;
+    type: "PUBLIC" | "PRIVATE";
+  };
+}
+
+export const useJoinRoom = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [room, setRoom] = useState<JoinRoomResponse["room"] | null>(null);
+
+  const joinRoom = async (code: string): Promise<JoinRoomResponse["room"]> => {
+    if (!code || code.trim().length < 3) {
+      const errorMessage = "Valid access code is required";
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      setRoom(null);
+
+      const response = await fetch(`${API_BASE_URL}/join-room`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code: code.toUpperCase() }),
+      });
+
+      // Check if response is OK and has JSON content type
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        const contentType = response.headers.get("content-type");
+
+        // Try to parse error as JSON
+        if (contentType && contentType.includes("application/json")) {
+          const errorData: ApiError = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } else {
+          // Handle non-JSON error (e.g., HTML, plain text)
+          const text = await response.text();
+          console.error("Non-JSON response:", text);
+          errorMessage = text || "Invalid server response";
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Ensure response is JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Expected JSON, received:", text);
+        throw new Error("Invalid response format from server");
+      }
+
+      const data: JoinRoomResponse = await response.json();
+      setRoom(data.room);
+
+      console.log(`✅ Joined Private Room "${data.room.slug}" - Code: ${code.toUpperCase()}`);
+
+      return data.room;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to join room";
+      setError(errorMessage);
+      console.error("Join room error:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    joinRoom,
+    room,
+    loading,
+    error,
   };
 };

@@ -408,6 +408,48 @@ app.get("/shapes/:roomId", async (req: Request, res: Response): Promise<void> =>
   }
 });
 
+/**
+ * @route POST /join-room
+ * @desc Join a private room by validating the access code
+ * @access Public
+ * @body { code: string }
+ * @returns { room: { id: number, slug: string, type: string } }
+ */
+app.post("/join-room", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { code } = req.body;
+
+    // Validate input
+    if (!code || typeof code !== "string" || code.trim().length < 3) {
+      res.status(400).json({ message: "Valid access code is required" });
+      return;
+    }
+
+    // Find room by code
+    const room = await prismaClient.room.findFirst({
+      where: {
+        code: code.toUpperCase(),
+        type: "PRIVATE",
+      },
+      select: {
+        id: true,
+        slug: true,
+        type: true,
+      },
+    });
+
+    if (!room) {
+      res.status(404).json({ message: "Invalid access code or room not found" });
+      return;
+    }
+
+    res.json({ room });
+  } catch (error) {
+    console.error("Join room error:", error);
+    res.status(500).json({ message: "Failed to join room" });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {

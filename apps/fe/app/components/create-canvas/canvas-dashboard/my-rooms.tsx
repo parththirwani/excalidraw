@@ -148,20 +148,8 @@ export function MyRooms({ rooms, filteredRooms, searchQuery, filters, onCreateCa
               {/* Thumbnail */}
               <div className={`h-32 bg-gradient-to-br ${getRandomGradient()} relative`}>
                 <div className="absolute top-3 right-3">
-                  <Badge variant="outline" className="bg-black/40 border-white/20 text-white text-xs">
-                    <Eye className="h-3 w-3 mr-1" />
-                    {room._count?.chats || 0}
-                  </Badge>
                 </div>
                 {/* Show code badge for private rooms */}
-                {room.type === 'PRIVATE' && room.code && (
-                  <div className="absolute top-3 left-3">
-                    <Badge variant="outline" className="bg-amber-500/20 border-amber-500/40 text-amber-300 text-xs">
-                      <Lock className="h-3 w-3 mr-1" />
-                      {room.code}
-                    </Badge>
-                  </div>
-                )}
               </div>
 
               {/* Content */}

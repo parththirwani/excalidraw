@@ -1,19 +1,23 @@
+import { useState } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Badge } from "@/app/components/ui/badge";
-import { 
-  Plus, 
-  RefreshCw, 
-  AlertCircle, 
-  Search, 
+import {
+  Plus,
+  RefreshCw,
+  AlertCircle,
+  Search,
   Filter,
   Globe,
   Lock,
   X,
-  LogOut
+  LogOut,
+  UserPlus
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/app/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../../ui/avatar";
+import { JoinRoomModal } from "./join-room";
+
 
 interface DashboardHeaderProps {
   error: string | null;
@@ -49,6 +53,7 @@ export function DashboardHeader({
   user,
   onLogout
 }: DashboardHeaderProps) {
+  const [joinRoomModalOpen, setJoinRoomModalOpen] = useState(false);
   const hasActiveFilters = !filters.showPublic || !filters.showPrivate;
 
   const clearFilters = () => {
@@ -60,7 +65,7 @@ export function DashboardHeader({
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
     }
-    
+
     // Call the onLogout callback if provided
     if (onLogout) {
       onLogout();
@@ -111,21 +116,30 @@ export function DashboardHeader({
             </Button>
           )}
           <Button
+            onClick={() => setJoinRoomModalOpen(true)}
+            variant="outline"
+            className="px-3 py-2 rounded-lg border border-gray-700 hover:bg-gray-600 transition-colors text-[#1d1d24] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: '#a8a5ff' }}
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Join Room
+          </Button>
+          <Button
             onClick={onCreateCanvas}
             className="bg-white text-black hover:bg-gray-100 font-medium px-6 py-2.5 rounded-lg transition-all duration-200"
           >
             <Plus className="h-4 w-4 mr-2" />
             New Canvas
           </Button>
-          
+
           {/* Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 hover:bg-white/10">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage 
-                    src={user?.avatar} 
-                    alt={user?.name || user?.email || 'User'} 
+                  <AvatarImage
+                    src={user?.avatar}
+                    alt={user?.name || user?.email || 'User'}
                   />
                   <AvatarFallback className="bg-white/10 text-white border border-white/20">
                     {getUserInitials()}
@@ -133,7 +147,7 @@ export function DashboardHeader({
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent 
+            <DropdownMenuContent
               className="w-56 bg-[#232329] border-white/10 text-white"
               align="start"
               forceMount
@@ -158,7 +172,7 @@ export function DashboardHeader({
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="text-red-400 focus:bg-red-500/10 focus:text-red-400 cursor-pointer"
                 onClick={handleLogout}
               >
@@ -194,11 +208,11 @@ export function DashboardHeader({
             className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:border-white/20 focus:bg-white/10 rounded-lg"
           />
         </div>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="border-white/10 text-gray-400 hover:text-white hover:border-white/20 bg-transparent relative"
             >
               <Filter className="h-4 w-4 mr-2" />
@@ -208,7 +222,7 @@ export function DashboardHeader({
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent 
+          <DropdownMenuContent
             className="w-56 bg-[#232329] border-white/10 text-white"
             align="start"
           >
@@ -255,16 +269,16 @@ export function DashboardHeader({
         <div className="mb-6 flex items-center gap-2">
           <span className="text-sm text-gray-400">Active filters:</span>
           {!filters.showPublic && (
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className="text-xs bg-red-500/10 text-red-400 border-red-500/20"
             >
               Public Hidden
             </Badge>
           )}
           {!filters.showPrivate && (
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className="text-xs bg-red-500/10 text-red-400 border-red-500/20"
             >
               Private Hidden
@@ -303,6 +317,12 @@ export function DashboardHeader({
           </div>
         </div>
       </div>
+
+      {/* Join Room Modal */}
+      <JoinRoomModal
+        isOpen={joinRoomModalOpen}
+        onClose={() => setJoinRoomModalOpen(false)}
+      />
     </div>
   );
 }
